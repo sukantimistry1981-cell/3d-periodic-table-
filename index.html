@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Periodic Table</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  color:#fff;
+  background:radial-gradient(circle at top,#183b67,#070b18 75%);
+  min-height:100vh;
+}
+header{text-align:center;padding:22px 10px}
+h1{margin:0;color:#67e8f9;font-size:28px}
+header p{color:#cbd5e1}
+#search{
+  display:block;width:90%;max-width:400px;margin:15px auto;
+  padding:13px;border-radius:12px;border:1px solid #67e8f9;
+  background:#101c32;color:white;font-size:16px;
+}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px}
+.legend span{padding:7px 10px;border-radius:8px;font-size:12px}
+.table-wrap{overflow-x:auto;padding:15px 10px 30px}
+#table{
+  display:grid;
+  grid-template-columns:repeat(18,minmax(48px,1fr));
+  gap:5px;min-width:950px;max-width:1400px;margin:auto;
+}
+.element{
+  min-height:70px;border:1px solid #ffffff40;border-radius:8px;
+  padding:5px 2px;text-align:center;cursor:pointer;
+  transform-style:preserve-3d;
+  transition:transform .25s,box-shadow .25s;
+  box-shadow:0 4px 0 #0005;
+  color:#101827;
+}
+.element:hover{
+  transform:translateY(-5px) rotateX(8deg) scale(1.04);
+  box-shadow:0 10px 20px #00e5ff55;
+  z-index:2;
+}
+.num{display:block;font-size:10px;text-align:left;padding-left:3px}
+.sym{display:block;font-size:22px;font-weight:bold}
+.nam{display:block;font-size:9px;overflow-wrap:anywhere}
+.alkali{background:#ff9f9f}
+.alkaline{background:#ffc878}
+.transition{background:#f9df76}
+.post{background:#b8e986}
+.metalloid{background:#70e0c1}
+.nonmetal{background:#76d5ff}
+.halogen{background:#a8b4ff}
+.noble{background:#d5a8ff}
+.lanthanide{background:#ffb4df}
+.actinide{background:#ff8fc7}
+.other{background:#d0d8e5}
+#details{
+  display:none;position:fixed;inset:0;background:#000b;
+  z-index:10;align-items:center;justify-content:center;padding:20px;
+}
+.panel{
+  background:linear-gradient(145deg,#152c4c,#080e1c);
+  border:1px solid #67e8f9;border-radius:20px;
+  padding:25px;width:100%;max-width:380px;text-align:center;
+  box-shadow:0 0 35px #00d9ff44;
+}
+.big{font-size:65px;color:#67e8f9;font-weight:bold}
+.panel h2{margin:5px}
+.panel p{color:#dbeafe;line-height:1.7}
+button{
+  background:#67e8f9;color:#07111e;border:0;
+  border-radius:10px;padding:12px 20px;font-weight:bold;
+  cursor:pointer;font-size:15px;
+}
+footer{text-align:center;padding:20px;color:#94a3b8;font-size:12px}
+@media(max-width:600px){
+  h1{font-size:23px}
+  .table-wrap{padding-left:6px;padding-right:6px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚛ 3D PERIODIC TABLE</h1>
+  <p>Explore the 118 Elements of Science</p>
+</header>
+
+<input id="search" placeholder="🔍 Search element or symbol...">
+
+<div class="legend">
+  <span class="alkali">Alkali metals</span>
+  <span class="alkaline">Alkaline earth</span>
+  <span class="transition">Transition metals</span>
+  <span class="post">Other metals</span>
+  <span class="metalloid">Metalloids</span>
+  <span class="nonmetal">Nonmetals</span>
+  <span class="halogen">Halogens</span>
+  <span class="noble">Noble gases</span>
+  <span class="lanthanide">Lanthanides</span>
+  <span class="actinide">Actinides</span>
+</div>
+
+<div class="table-wrap">
+  <div id="table"></div>
+</div>
+
+<div id="details" onclick="if(event.target===this)closeDetails()">
+  <div class="panel">
+    <div class="big" id="dSym"></div>
+    <h2 id="dName"></h2>
+    <p id="dInfo"></p>
+    <button onclick="closeDetails()">Close ✕</button>
+  </div>
+</div>
+
+<footer>Interactive Chemistry Learning • 118 Elements</footer>
+
+<script>
+const symbols = `
+H He Li Be B C N O F Ne
+Na Mg Al Si P S Cl Ar
+K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr
+Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe
+Cs Ba La Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn
+Fr Ra Ac Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og
+Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu
+Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr
+`.trim().split(/\s+/);
+
+const names = `
+Hydrogen Helium Lithium Beryllium Boron Carbon Nitrogen Oxygen Fluorine Neon
+Sodium Magnesium Aluminium Silicon Phosphorus Sulfur Chlorine Argon
+Potassium Calcium Scandium Titanium Vanadium Chromium Manganese Iron Cobalt Nickel Copper Zinc Gallium Germanium Arsenic Bromine Krypton
+Rubidium Strontium Yttrium Zirconium Niobium Molybdenum Technetium Ruthenium Rhodium Palladium Silver Cadmium Indium Tin Antimony Tellurium Iodine Xenon
+Cesium Barium Lanthanum Hafnium Tantalum Tungsten Rhenium Osmium Iridium Platinum Gold Mercury Thallium Lead Bismuth Polonium Astatine Radon
+Francium Radium Actinium Rutherfordium Dubnium Seaborgium Bohrium Hassium Meitnerium Darmstadtium Roentgenium Copernicium Nihonium Flerovium Moscovium Livermorium Tennessine Oganesson
+Cerium Praseodymium Neodymium Promethium Samarium Europium Gadolinium Terbium Dysprosium Holmium Erbium Thulium Ytterbium Lutetium
+Thorium Protactinium Uranium Neptunium Plutonium Americium Curium Berkelium Californium Einsteinium Fermium Mendelevium Nobelium Lawrencium
+`.trim().split(/\s+/);
+
+const atomicMass = [
+"1.008","4.0026","6.94","9.0122","10.81","12.011","14.007","15.999","18.998","20.180",
+"22.990","24.305","26.982","28.085","30.974","32.06","35.45","39.948",
+"39.098","40.078","44.956","47.867","50.942","51.996","54.938","55.845","58.933","58.693","63.546","65.38","69.723","72.630","74.922","78.971","79.904","83.798"
+];
+
+const table = document.getElementById("table");
+const search = document.getElementById("search");
+const special = {
+  1:"nonmetal",2:"noble",
+  3:"alkali",4:"alkaline",5:"metalloid",6:"nonmetal",7:"nonmetal",8:"nonmetal",9:"halogen",10:"noble",
+  11:"alkali",12:"alkaline",13:"post",14:"metalloid",15:"nonmetal",16:"nonmetal",17:"halogen",18:"noble",
+  19:"alkali",20:"alkaline",31:"post",32:"metalloid",33:"metalloid",34:"nonmetal",35:"halogen",36:"noble",
+  37:"alkali",38:"alkaline",49:"post",50:"post",51:"metalloid",52:"metalloid",53:"halogen",54:"noble",
+  55:"alkali",56:"alkaline",81:"post",82:"post",83:"post",84:"post",85:"halogen",86:"noble",
+  87:"alkali",88:"alkaline",113:"post",114:"post",115:"post",116:"post",117:"halogen",118:"noble"
+};
+const lanth = [57,...Array.from({length:14},(_,i)=>58+i)];
+const actin = [89,...Array.from({length:14},(_,i)=>90+i)];
+
+function category(n){
+  if(lanth.includes(n)) return "lanthanide";
+  if(actin.includes(n)) return "actinide";
+  if(special[n]) return special[n];
+  if(n>=104) return "transition";
+  if(n>=21 && n<=30 || n>=39 && n<=48 || n>=72 && n<=80 || n>=104 && n<=112) return "transition";
+  return "transition";
+}
+
+// Main periodic table positions: atomic number -> column and row
+const positions = {
+1:[1,1],2:[18,1],
+3:[1,2],4:[2,2],5:[13,2],6:[14,2],7:[15,2],8:[16,2],9:[17,2],10:[18,2],
+11:[1,3],12:[2,3],13:[13,3],14:[14,3],15:[15,3],16:[16,3],17:[17,3],18:[18,3],
+19:[1,4],20:[2,4],21:[3,4],22:[4,4],23:[5,4],24:[6,4],25:[7,4],26:[8,4],27:[9,4],28:[10,4],29:[11,4],30:[12,4],31:[13,4],32:[14,4],33:[15,4],34:[16,4],35:[17,4],36:[18,4],
+37:[1,5],38:[2,5],39:[3,5],40:[4,5],41:[5,5],42:[6,5],43:[7,5],44:[8,5],45:[9,5],46:[10,5],47:[11,5],48:[12,5],49:[13,5],50:[14,5],51:[15,5],52:[16,5],53:[17,5],54:[18,5],
+55:[1,6],56:[2,6],72:[4,6],73:[5,6],74:[6,6],75:[7,6],76:[8,6],77:[9,6],78:[10,6],79:[11,6],80:[12,6],81:[13,6],82:[14,6],83:[15,6],84:[16,6],85:[17,6],86:[18,6],
+87:[1,7],88:[2,7],104:[4,7],105:[5,7],106:[6,7],107:[7,7],108:[8,7],109:[9,7],110:[10,7],111:[11,7],112:[12,7],113:[13,7],114:[14,7],115:[15,7],116:[16,7],117:[17,7],118:[18,7]
+};
+
+function makeElement(n){
+  const el=document.createElement("div");
+  el.className="element "+category(n);
+  el.style.gridColumn=positions[n]?.[0] || 1;
+  el.style.gridRow=positions[n]?.[1] || 9;
+  if(n>=57&&n<=71) {
+    el.style.gridColumn=n-54;
+    el.style.gridRow=9;
+  }
+  if(n>=89&&n<=103) {
+    el.style.gridColumn=n-86;
+    el.style.gridRow=10;
+  }
+  el.dataset.search=(symbols[n-1]+" "+names[n-1]+" "+n).toLowerCase();
+  el.innerHTML=`<span class="num">${n}</span><span class="sym">${symbols[n-1]}</span><span class="nam">${names[n-1]}</span>`;
+  el.onclick=()=>showDetails(n);
+  table.appendChild(el);
+}
+for(let n=1;n<=118;n++) makeElement(n);
+
+search.addEventListener("input",()=>{
+  const q=search.value.toLowerCase().trim();
+  document.querySelectorAll(".element").forEach(el=>{
+    el.style.opacity=(!q||el.dataset.search.includes(q))?"1":"0.13";
+    el.style.transform=q&&el.dataset.search.includes(q)?"scale(1.08)":"";
+  });
+});
+
+function showDetails(n){
+  document.getElementById("dSym").textContent=symbols[n-1];
+  document.getElementById("dName").textContent=names[n-1];
+  const mass=atomicMass[n-1] || "Varies by isotope";
+  document.getElementById("dInfo").innerHTML=
+    "Atomic Number: <b>"+n+"</b><br>"+
+    "Symbol: <b>"+symbols[n-1]+"</b><br>"+
+    "Element: <b>"+names[n-1]+"</b><br>"+
+    "Atomic Mass: <b>"+mass+"</b><br>"+
+    "Group: <b>"+category(n)+"</b>";
+  document.getElementById("details").style.display="flex";
+}
+function closeDetails(){
+  document.getElementById("details").style.display="none";
+}
+</script>
+</body>
+</html>
